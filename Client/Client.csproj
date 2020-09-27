@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="$(MicrosoftAspNetCoreAppPackageVersion)" PrivateAssets="all" />
+    <PackageReference Include="System.Net.Http.Json" Version="$(MicrosoftAspNetCoreAppPackageVersion)" />
+
+    <PackageReference Include="Google.Protobuf" Version="$(GoogleProtobufPackageVersion)" />
+    <PackageReference Include="Grpc.Tools" Version="$(GrpcPackageVersion)" PrivateAssets="All" />
+    <PackageReference Include="Grpc.Net.Client" Version="$(GrpcDotNetPackageVersion)" />
+    <PackageReference Include="Grpc.Net.Client.Web" Version="$(GrpcDotNetPackageVersion)" />
+
+    <Protobuf Include="..\Proto\weather.proto" GrpcServices="Client" Link="Protos\weather.proto" Access="Internal" />
+  </ItemGroup>
+
+</Project>
