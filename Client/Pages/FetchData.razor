@@ -25,7 +25,7 @@
     </div>
     <div class="form-group">
         <label>
-            <input type="checkbox" @bind="virtualizeUi" />
+            <input type="checkbox" @bind="shouldVirtualizeUi" />
             Virtualize UI
         </label>
     </div>
@@ -113,10 +113,12 @@ else if (grpcForecasts != null || jsonForecasts != null)
     private double totalSeconds;
     private double headersSeconds;
     private int bytesRead;
+    private bool virtualizeUi;
+
     private CallType callType;
     private int returnCount;
     private string? error;
-    private bool virtualizeUi = true;
+    private bool shouldVirtualizeUi = true;
 
     private async Task Fetch()
     {
@@ -131,6 +133,7 @@ else if (grpcForecasts != null || jsonForecasts != null)
             error = null;
             grpcForecasts = null;
             jsonForecasts = null;
+            virtualizeUi = shouldVirtualizeUi;
             stopwatch.Start();
 
             switch (callType)
