@@ -162,7 +162,7 @@ else if (grpcForecasts != null || jsonForecasts != null)
         };
         grpcWebClient = CreateClient(GrpcWebMode.GrpcWeb);
         grpcWebTextClient = CreateClient(GrpcWebMode.GrpcWebText);
-        returnCount = 5000;
+        returnCount = 10000;
 
         return Task.CompletedTask;
     }
