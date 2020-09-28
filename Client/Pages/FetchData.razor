@@ -63,29 +63,28 @@ else if (grpcForecasts != null || jsonForecasts != null)
         <tbody>
             @if (grpcForecasts != null)
             {
-                <Virtualize Items="grpcForecasts" Context="forecast">
-                    <ItemContent>
-                        <tr>
-                            <td>@forecast.DateTime.ToShortDateString()</td>
-                            <td>@forecast.TemperatureC</td>
-                            <td>@forecast.TemperatureF</td>
-                            <td>@forecast.Summary</td>
-                        </tr>
-                    </ItemContent>
-                </Virtualize>
+
+                foreach (var forecast in grpcForecasts)
+                {
+                    <tr>
+                        <td>@forecast.DateTime.ToShortDateString()</td>
+                        <td>@forecast.TemperatureC</td>
+                        <td>@forecast.TemperatureF</td>
+                        <td>@forecast.Summary</td>
+                    </tr>
+                }
             }
             else if (jsonForecasts != null)
             {
-                <Virtualize Items="jsonForecasts" Context="forecast">
-                    <ItemContent>
-                        <tr>
-                            <td>@forecast.Date.ToShortDateString()</td>
-                            <td>@forecast.TemperatureC</td>
-                            <td>@forecast.TemperatureF</td>
-                            <td>@forecast.Summary</td>
-                        </tr>
-                    </ItemContent>
-                </Virtualize>
+                foreach (var forecast in jsonForecasts)
+                {
+                    <tr>
+                        <td>@forecast.Date.ToShortDateString()</td>
+                        <td>@forecast.TemperatureC</td>
+                        <td>@forecast.TemperatureF</td>
+                        <td>@forecast.Summary</td>
+                    </tr>
+                }
             }
         </tbody>
     </table>
