@@ -5,6 +5,7 @@
 @using Grpc.Net.Client.Web
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+@using Microsoft.AspNetCore.Components.Rendering
 
 <h1>Weather forecast</h1>
 
@@ -21,6 +22,12 @@
     <div class="form-group">
         <label>Call return count</label>
         <input class="form-control" type="text" @bind="returnCount">
+    </div>
+    <div class="form-group">
+        <label>
+            <input type="checkbox" @bind="virtualizeUi" />
+            Virtualize UI
+        </label>
     </div>
     <button class="btn btn-primary" disabled="@stopwatch.IsRunning">Fetch data</button>
 </form>
@@ -63,27 +70,30 @@ else if (grpcForecasts != null || jsonForecasts != null)
         <tbody>
             @if (grpcForecasts != null)
             {
-
-                foreach (var forecast in grpcForecasts)
+                if (virtualizeUi)
                 {
-                    <tr>
-                        <td>@forecast.DateTime.ToShortDateString()</td>
-                        <td>@forecast.TemperatureC</td>
-                        <td>@forecast.TemperatureF</td>
-                        <td>@forecast.Summary</td>
-                    </tr>
+                    <Virtualize Items="grpcForecasts" ChildContent="renderGrpcForecast" />
+                }
+                else
+                {
+                    foreach (var forecast in grpcForecasts)
+                    {
+                        @renderGrpcForecast(forecast);
+                    }
                 }
             }
             else if (jsonForecasts != null)
             {
-                foreach (var forecast in jsonForecasts)
+                if (virtualizeUi)
                 {
-                    <tr>
-                        <td>@forecast.Date.ToShortDateString()</td>
-                        <td>@forecast.TemperatureC</td>
-                        <td>@forecast.TemperatureF</td>
-                        <td>@forecast.Summary</td>
-                    </tr>
+                    <Virtualize Items="jsonForecasts" ChildContent="renderJsonForecast" />
+                }
+                else
+                {
+                    foreach (var forecast in jsonForecasts)
+                    {
+                        @renderJsonForecast(forecast);
+                    }
                 }
             }
         </tbody>
@@ -106,6 +116,7 @@ else if (grpcForecasts != null || jsonForecasts != null)
     private CallType callType;
     private int returnCount;
     private string? error;
+    private bool virtualizeUi = true;
 
     private async Task Fetch()
     {
@@ -194,6 +205,26 @@ else if (grpcForecasts != null || jsonForecasts != null)
 
         return new WeatherForecasts.WeatherForecastsClient(channel);
     }
+
+    private static RenderFragment<WeatherForecastViewModel> renderJsonForecast = forecast => __builder =>
+    {
+    <tr @key="forecast.Date">
+        <td>@forecast.Date.ToShortDateString()</td>
+        <td>@forecast.TemperatureC</td>
+        <td>@forecast.TemperatureF</td>
+        <td>@forecast.Summary</td>
+    </tr>
+    };
+
+    private static RenderFragment<WeatherForecast> renderGrpcForecast = forecast => __builder =>
+    {
+    <tr @key="forecast.Date">
+        <td>@forecast.DateTime.ToShortDateString()</td>
+        <td>@forecast.TemperatureC</td>
+        <td>@forecast.TemperatureF</td>
+        <td>@forecast.Summary</td>
+    </tr>
+    };
 
     private enum CallType
     {
