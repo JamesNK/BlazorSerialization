@@ -5,6 +5,7 @@
 @using Grpc.Net.Client.Web
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+@using Microsoft.AspNetCore.Components.Rendering
 
 <h1>Weather forecast</h1>
 
@@ -21,6 +22,12 @@
     <div class="form-group">
         <label>Call return count</label>
         <input class="form-control" type="text" @bind="returnCount">
+    </div>
+    <div class="form-group">
+        <label>
+            <input type="checkbox" @bind="virtualizeUi" />
+            Virtualize UI
+        </label>
     </div>
     <button class="btn btn-primary" disabled="@stopwatch.IsRunning">Fetch data</button>
 </form>
@@ -42,6 +49,11 @@ else if (grpcForecasts != null || jsonForecasts != null)
         <li class="list-group-item">Data size: <b>@(Math.Round((double)bytesRead / 1024, 2)) kilobytes</b></li>
         <li class="list-group-item">Network time: <b>@Math.Round(headersSeconds, 2) seconds</b></li>
         <li class="list-group-item">Deserialization time: <b>@(Math.Round(totalSeconds - headersSeconds, 2)) seconds</b></li>
+
+        @if (!renderingStopwatch.IsRunning && renderingStopwatch.Elapsed.TotalSeconds > 0)
+        {
+            <li class="list-group-item">Rendering time: <b>@Math.Round(renderingStopwatch.Elapsed.TotalSeconds, 2) seconds</b></li>
+        }
     </ul>
     <br />
 
@@ -58,29 +70,31 @@ else if (grpcForecasts != null || jsonForecasts != null)
         <tbody>
             @if (grpcForecasts != null)
             {
-                <Virtualize Items="grpcForecasts" Context="forecast">
-                    <ItemContent>
-                        <tr>
-                            <td>@forecast.DateTime.ToShortDateString()</td>
-                            <td>@forecast.TemperatureC</td>
-                            <td>@forecast.TemperatureF</td>
-                            <td>@forecast.Summary</td>
-                        </tr>
-                    </ItemContent>
-                </Virtualize>
+                if (virtualizeUi)
+                {
+                    <Virtualize Items="grpcForecasts" ChildContent="renderGrpcForecast" />
+                }
+                else
+                {
+                    foreach (var forecast in grpcForecasts)
+                    {
+                        @renderGrpcForecast(forecast);
+                    }
+                }
             }
             else if (jsonForecasts != null)
             {
-                <Virtualize Items="jsonForecasts" Context="forecast">
-                    <ItemContent>
-                        <tr>
-                            <td>@forecast.Date.ToShortDateString()</td>
-                            <td>@forecast.TemperatureC</td>
-                            <td>@forecast.TemperatureF</td>
-                            <td>@forecast.Summary</td>
-                        </tr>
-                    </ItemContent>
-                </Virtualize>
+                if (virtualizeUi)
+                {
+                    <Virtualize Items="jsonForecasts" ChildContent="renderJsonForecast" />
+                }
+                else
+                {
+                    foreach (var forecast in jsonForecasts)
+                    {
+                        @renderJsonForecast(forecast);
+                    }
+                }
             }
         </tbody>
     </table>
@@ -91,6 +105,7 @@ else if (grpcForecasts != null || jsonForecasts != null)
     private WeatherForecasts.WeatherForecastsClient grpcWebClient = default!;
     private WeatherForecasts.WeatherForecastsClient grpcWebTextClient = default!;
     private Stopwatch stopwatch = default!;
+    private Stopwatch renderingStopwatch = new Stopwatch();
     private BenchmarkHttpHandler httpHandler = default!;
 
     private IList<WeatherForecast>? grpcForecasts;
@@ -101,6 +116,7 @@ else if (grpcForecasts != null || jsonForecasts != null)
     private CallType callType;
     private int returnCount;
     private string? error;
+    private bool virtualizeUi = true;
 
     private async Task Fetch()
     {
@@ -150,6 +166,9 @@ else if (grpcForecasts != null || jsonForecasts != null)
         {
             stopwatch.Reset();
         }
+
+        renderingStopwatch.Reset();
+        renderingStopwatch.Start();
     }
 
     protected override Task OnInitializedAsync()
@@ -167,6 +186,15 @@ else if (grpcForecasts != null || jsonForecasts != null)
         return Task.CompletedTask;
     }
 
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (renderingStopwatch.IsRunning)
+        {
+            renderingStopwatch.Stop();
+            StateHasChanged();
+        }
+    }
+
     private WeatherForecasts.WeatherForecastsClient CreateClient(GrpcWebMode grpcWebMode)
     {
         var channel = GrpcChannel.ForAddress(Env.BaseAddress, new GrpcChannelOptions
@@ -177,6 +205,26 @@ else if (grpcForecasts != null || jsonForecasts != null)
 
         return new WeatherForecasts.WeatherForecastsClient(channel);
     }
+
+    private static RenderFragment<WeatherForecastViewModel> renderJsonForecast = forecast => __builder =>
+    {
+    <tr @key="forecast.Date">
+        <td>@forecast.Date.ToShortDateString()</td>
+        <td>@forecast.TemperatureC</td>
+        <td>@forecast.TemperatureF</td>
+        <td>@forecast.Summary</td>
+    </tr>
+    };
+
+    private static RenderFragment<WeatherForecast> renderGrpcForecast = forecast => __builder =>
+    {
+    <tr @key="forecast.Date">
+        <td>@forecast.DateTime.ToShortDateString()</td>
+        <td>@forecast.TemperatureC</td>
+        <td>@forecast.TemperatureF</td>
+        <td>@forecast.Summary</td>
+    </tr>
+    };
 
     private enum CallType
     {
