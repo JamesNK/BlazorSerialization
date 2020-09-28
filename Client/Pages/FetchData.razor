@@ -1,8 +1,10 @@
-﻿@page "/fetchdata"
-@inject Microsoft.AspNetCore.Components.WebAssembly.Hosting.IWebAssemblyHostEnvironment Env
-@using Google.Protobuf.WellKnownTypes
+﻿@page "/"
+@inject IWebAssemblyHostEnvironment Env
+@using System.Diagnostics
 @using Grpc.Net.Client
 @using Grpc.Net.Client.Web
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
 
 <h1>Weather forecast</h1>
 
@@ -14,122 +16,150 @@
         <select class="form-control" @bind="callType">
             <option value="Json">JSON</option>
             <option value="GrpcWeb">grpc-web</option>
-            <option value="GrpcWebText">grpc-web-text</option>
         </select>
     </div>
     <div class="form-group">
         <label>Call return count</label>
         <input class="form-control" type="text" @bind="returnCount">
     </div>
-    <button class="btn btn-primary" disabled="@(stopwatch != null)">Fetch data</button>
+    <button class="btn btn-primary" disabled="@stopwatch.IsRunning">Fetch data</button>
 </form>
+<hr />
 <br />
 
-@if (stopwatch != null)
+@if (error != null)
+{
+    <p><em>@error</em></p>
+}
+else if (stopwatch.IsRunning)
 {
     <p><em>Loading...</em></p>
 }
-else
+else if (grpcForecasts != null || jsonForecasts != null)
 {
-    if (grpcForecasts != null)
-    {
-        <p>Results loaded in <b>@totalSeconds seconds</b>. Displaying first 10:</p>
+    <h4>Results</h4>
+    <ul class="list-group">
+        <li class="list-group-item">Data size: <b>@(Math.Round((double)bytesRead / 1024, 2)) kilobytes</b></li>
+        <li class="list-group-item">Network time: <b>@Math.Round(headersSeconds, 2) seconds</b></li>
+        <li class="list-group-item">Deserialization time: <b>@(Math.Round(totalSeconds - headersSeconds, 2)) seconds</b></li>
+    </ul>
+    <br />
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Temp. (C)</th>
-                    <th>Temp. (F)</th>
-                    <th>Summary</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var f in grpcForecasts.Take(10))
-                {
-                    <tr>
-                        <td>@f.DateTime.ToShortDateString()</td>
-                        <td>@f.TemperatureC</td>
-                        <td>@f.TemperatureF</td>
-                        <td>@f.Summary</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-    else if (jsonForecasts != null)
-    {
-        <p>Results loaded in <b>@totalSeconds seconds</b>. Displaying first 10:</p>
-
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Temp. (C)</th>
-                    <th>Temp. (F)</th>
-                    <th>Summary</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var f in jsonForecasts.Take(10))
-                {
-                    <tr>
-                        <td>@f.Date.ToShortDateString()</td>
-                        <td>@f.TemperatureC</td>
-                        <td>@f.TemperatureF</td>
-                        <td>@f.Summary</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
+    <h4>Data</h4>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (grpcForecasts != null)
+            {
+                <Virtualize Items="grpcForecasts" Context="forecast">
+                    <ItemContent>
+                        <tr>
+                            <td>@forecast.DateTime.ToShortDateString()</td>
+                            <td>@forecast.TemperatureC</td>
+                            <td>@forecast.TemperatureF</td>
+                            <td>@forecast.Summary</td>
+                        </tr>
+                    </ItemContent>
+                </Virtualize>
+            }
+            else if (jsonForecasts != null)
+            {
+                <Virtualize Items="jsonForecasts" Context="forecast">
+                    <ItemContent>
+                        <tr>
+                            <td>@forecast.Date.ToShortDateString()</td>
+                            <td>@forecast.TemperatureC</td>
+                            <td>@forecast.TemperatureF</td>
+                            <td>@forecast.Summary</td>
+                        </tr>
+                    </ItemContent>
+                </Virtualize>
+            }
+        </tbody>
+    </table>
 }
 
 @code {
-    private IList<WeatherForecast>? grpcForecasts;
-    private IList<WeatherForecastViewModel>? jsonForecasts;
-    private System.Diagnostics.Stopwatch? stopwatch;
-    private double totalSeconds;
-    private CallType callType;
-    private int returnCount;
     private HttpClient httpClient = default!;
     private WeatherForecasts.WeatherForecastsClient grpcWebClient = default!;
     private WeatherForecasts.WeatherForecastsClient grpcWebTextClient = default!;
+    private Stopwatch stopwatch = default!;
+    private BenchmarkHttpHandler httpHandler = default!;
+
+    private IList<WeatherForecast>? grpcForecasts;
+    private IList<WeatherForecastViewModel>? jsonForecasts;
+    private double totalSeconds;
+    private double headersSeconds;
+    private int bytesRead;
+    private CallType callType;
+    private int returnCount;
+    private string? error;
 
     private async Task Fetch()
     {
-        grpcForecasts = null;
-        jsonForecasts = null;
-        stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-        switch (callType)
+        if (returnCount < 0 || returnCount > 999999)
         {
-            case CallType.Json:
-                {
-                    jsonForecasts = await httpClient.GetFromJsonAsync<WeatherForecastViewModel[]>("/weatherforecast?returnCount=" + returnCount);
-                    break;
-                }
-            case CallType.GrpcWeb:
-                {
-                    grpcForecasts = (await grpcWebClient.GetWeatherForecastsAsync(new GetWeatherForecastsRequest { ReturnCount = returnCount })).Forecasts;
-                    break;
-                }
-            case CallType.GrpcWebText:
-                {
-                    grpcForecasts = (await grpcWebTextClient.GetWeatherForecastsAsync(new GetWeatherForecastsRequest { ReturnCount = returnCount })).Forecasts;
-                    break;
-                }
-            default:
-                throw new ArgumentOutOfRangeException();
+            error = "Return count must be between 0 and 999999";
+            return;
         }
 
-        totalSeconds = stopwatch.Elapsed.TotalSeconds;
-        stopwatch = null;
+        try
+        {
+            error = null;
+            grpcForecasts = null;
+            jsonForecasts = null;
+            stopwatch.Start();
+
+            switch (callType)
+            {
+                case CallType.Json:
+                    {
+                        jsonForecasts = await httpClient.GetFromJsonAsync<WeatherForecastViewModel[]>("/weatherforecast?returnCount=" + returnCount);
+                        break;
+                    }
+                case CallType.GrpcWeb:
+                    {
+                        grpcForecasts = (await grpcWebClient.GetWeatherForecastsAsync(new GetWeatherForecastsRequest { ReturnCount = returnCount })).Forecasts;
+                        break;
+                    }
+                case CallType.GrpcWebText:
+                    {
+                        grpcForecasts = (await grpcWebTextClient.GetWeatherForecastsAsync(new GetWeatherForecastsRequest { ReturnCount = returnCount })).Forecasts;
+                        break;
+                    }
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            bytesRead = httpHandler.BytesRead!.Value;
+            headersSeconds = httpHandler.HeadersReceivedElapsed!.Value.TotalSeconds;
+            totalSeconds = stopwatch.Elapsed.TotalSeconds;
+        }
+        catch (Exception ex)
+        {
+            error = "Error fetching data: " + ex.ToString();
+        }
+        finally
+        {
+            stopwatch.Reset();
+        }
     }
 
     protected override Task OnInitializedAsync()
     {
-        httpClient = new HttpClient { BaseAddress = new Uri(Env.BaseAddress) };
+        stopwatch = new Stopwatch();
+        httpHandler = new BenchmarkHttpHandler(stopwatch, new HttpClientHandler());
+        httpClient = new HttpClient(httpHandler)
+        {
+            BaseAddress = new Uri(Env.BaseAddress)
+        };
         grpcWebClient = CreateClient(GrpcWebMode.GrpcWeb);
         grpcWebTextClient = CreateClient(GrpcWebMode.GrpcWebText);
         returnCount = 5000;
@@ -141,7 +171,7 @@ else
     {
         var channel = GrpcChannel.ForAddress(Env.BaseAddress, new GrpcChannelOptions
         {
-            HttpHandler = new GrpcWebHandler(grpcWebMode, new HttpClientHandler()),
+            HttpHandler = new GrpcWebHandler(grpcWebMode, httpHandler),
             MaxReceiveMessageSize = null
         });
 

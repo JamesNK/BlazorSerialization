@@ -16,6 +16,11 @@ namespace Server.Services
 
         public override Task<GetWeatherForecastsResponse> GetWeatherForecasts(GetWeatherForecastsRequest request, ServerCallContext context)
         {
+            if (request.ReturnCount > 999999)
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Return count is too large."));
+            }
+
             var rng = new Random();
             var results = Enumerable.Range(1, request.ReturnCount).Select(index => new WeatherForecast
             {

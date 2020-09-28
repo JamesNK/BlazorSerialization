@@ -25,6 +25,11 @@ namespace Server.Controllers
         [HttpGet]
         public IEnumerable<WeatherForecast> Get(int returnCount)
         {
+            if (returnCount > 999999)
+            {
+                throw new InvalidOperationException("Return count is too large.");
+            }
+
             var rng = new Random();
             return Enumerable.Range(1, returnCount).Select(index => new WeatherForecast
             {
