@@ -2,7 +2,7 @@
 
 This repo contains a Blazor WebAssembly app that compares the time to load data from JSON and gRPC-Web endpoints. Recorded time includes getting data from the server and deserializing it in WebAssembly.
 
-Requires .NET 5 RC1 or later.
+Requires .NET 5 RC2 daily SDK or later. Available [here](https://github.com/dotnet/installer/blob/master/README.md#installers-and-binaries).
 
 Usage:
 1. Run server project
