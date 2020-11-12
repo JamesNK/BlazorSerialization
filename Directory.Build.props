@@ -4,10 +4,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <PropertyGroup>
-    <MicrosoftAspNetCoreAppPackageVersion>5.0.0-rc.2.20460.25</MicrosoftAspNetCoreAppPackageVersion>
+    <MicrosoftAspNetCoreAppPackageVersion>5.0.0</MicrosoftAspNetCoreAppPackageVersion>
+    <SystemNetHttpJsonPackageVersion>5.0.0</SystemNetHttpJsonPackageVersion>
     <GoogleProtobufPackageVersion>3.13.0</GoogleProtobufPackageVersion>
-    <GrpcPackageVersion>2.32.0-pre1</GrpcPackageVersion>
-    <GrpcDotNetPackageVersion>2.32.0-pre1</GrpcDotNetPackageVersion>
+    <GrpcPackageVersion>2.33.0</GrpcPackageVersion>
+    <GrpcDotNetPackageVersion>2.33.0</GrpcDotNetPackageVersion>
   </PropertyGroup>
 
 </Project>
