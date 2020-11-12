@@ -7,8 +7,8 @@
     <MicrosoftAspNetCoreAppPackageVersion>5.0.0</MicrosoftAspNetCoreAppPackageVersion>
     <SystemNetHttpJsonPackageVersion>5.0.0</SystemNetHttpJsonPackageVersion>
     <GoogleProtobufPackageVersion>3.13.0</GoogleProtobufPackageVersion>
-    <GrpcPackageVersion>2.33.0</GrpcPackageVersion>
-    <GrpcDotNetPackageVersion>2.33.0</GrpcDotNetPackageVersion>
+    <GrpcPackageVersion>2.33.1</GrpcPackageVersion>
+    <GrpcDotNetPackageVersion>2.33.1</GrpcDotNetPackageVersion>
   </PropertyGroup>
 
 </Project>
